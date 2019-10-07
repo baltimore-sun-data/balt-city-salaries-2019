@@ -1,0 +1,201 @@
+---
+title: "Analysis: Baltimore city salaries, FY 2019"
+author: "Christine"
+date: "10/03/2019"
+output:   
+  md_document:
+    variant: markdown_github
+---
+
+## Analysis: Baltimore city salaries, fiscal year 2019
+
+The Baltimore Sun analyzed data from [Open Baltimore](https://data.baltimorecity.gov/City-Government/Baltimore-City-Employee-Salaries-FY2019/6xv6-e66h) on salaries for city employees employed on June 30, 2019. The dataset captures salary from July 1, 2018 through June 30, 2019.
+
+Here are the key statistics reported in the story:
+
+- Sgt. Ethan Newberg, a 24-year veteran of the city’s police force, earned $260,775, more than double his base salary of $107,807
+- In the previous fiscal year, Newberg ranked second on the list of best-paid city employees, making $243,132
+- Police Commissioner Michael Harrison and his two deputy commissioners, Danny Murphy and Michael Sullivan, were the only police employees whose base salary ranked in the top 10
+- Seven of the 10 highest-paid city employees were police officers
+- Harrison makes a base salary of $275,000. Former police commissioner Darryl DeSousa made an annual base salary of $210,000
+- Total police department pay exceeded base salary by more than $40 million, down from 2018, when the difference was $51 million 
+- The median pay for an employee in the police department was $93,278
+- The fire department had the second-highest total pay, with total compensation exceeding base salaries by more than $16 million
+- The median pay for a fire department employee was $82,097
+- The second-highest paid employee was Frank Johnson, who earned $251,922 on a salary of $250,000. The next-highest paid was William Harris Jr., a police sergeant who made $249,356 on a salary of $107,364. Harris was followed by police Lt. Thomas Mistysyn Jr., who earned $247,182 on a base salary of $122,049 and fire department employee Anthony Smith, who earned $243,747 on a base salary of $105,000. State’s Attorney Marilyn Mosby was the sixth-highest paid, with a salary of $238,772
+- Harris was the city’s highest paid employee in fiscal year 2018
+- Mayor Bernard C. “Jack” Young earned $127,984 on a salary of $184,832, nearly $10,000 more than what he earned as City Council President during the last fiscal year
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load R libraries
+
+```{r, warning=F, message=F}
+library('tidyverse')
+library('janitor')
+library('lubridate')
+```
+
+### Read salaries data
+```{r, warning=F, message=F}
+salaries.19 <- read_csv('input/Baltimore_City_Employee_Salaries_FY2019.csv') %>% clean_names()
+salaries.18 <- read_csv('input/Baltimore_City_Employee_Salaries_FY2018.csv') %>% clean_names()
+```
+
+### Finding: Sgt. Ethan Newberg, a 24-year veteran of the city’s police force, earned $260,775, more than double his base salary of $107,807
+
+Arrange the data by `gross` — the total compensation in fiscal year 2019 — and use `head()` to see the top salaries. Newberg is first.
+
+```{r}
+salaries.19 %>% arrange(desc(gross)) %>% head()
+```
+
+```{r}
+print(paste(salaries.19[order(-salaries.19$gross), ][1,]$name, "was the highest earner in fiscal year 2019, making",
+      salaries.19[order(-salaries.19$gross), ][1,]$gross, "or", 
+      round(salaries.19[order(-salaries.19$gross), ][1,]$gross/salaries.19[order(-salaries.19$gross), ][1,]$annual_rt, 1), "times base pay."))
+```
+
+```{r}
+print(paste("The highest earner has worked in the city for", round(as.numeric(difftime(today(), 
+                                                                                  as.Date(mdy_hms(salaries.19[order(-salaries.19$gross), ][1,]$hire_dt)), unit="weeks")/52.25), 1), "years."))
+```
+
+### Finding: In the previous fiscal year, Newberg ranked second on the list of best-paid city employees, making $243,132
+
+```{r}
+salaries.18 %>% arrange(desc(gross)) %>% head()
+```
+
+### Finding: Police Commissioner Michael Harrison and his two deputy commissioners, Danny Murphy and Michael Sullivan, were the only police employees whose base salary ranked in the top 10
+
+Arrange the data by `annual_rt` — the base salary in fiscal year 2019 — and use `head(10)` to see the top 10 salaries.
+
+```{r}
+salaries.19 %>% arrange(desc(annual_rt)) %>% head(10)
+```
+
+### Finding: Seven of the 10 highest-paid city employees were police officers
+
+Create a column, `police`, that = 1 if the employee works in the police department; 0 if not. Arrange the top 10 by gross and sum the number of police.
+
+```{r}
+salaries.19 %>% 
+  mutate(police = ifelse(grepl("Police", descr), 1, 0)) %>% 
+  arrange(desc(gross)) %>% 
+  head(10) %>% 
+  summarise(police_in_top_10 = sum(police))
+```
+
+### Finding: Harrison’s base salary is $275,000 a year. Former police commissioner Darryl DeSousa made an annual base salary of $210,000
+
+Use the 2019 and 2018 salary database to compare Harrison and DeSousa's pay
+
+```{r}
+print(salaries.19 %>% filter(jobtitle == 'Police Commissioner'))
+print(salaries.18 %>% filter(jobtitle == 'Police Commissioner'))
+```
+
+### Finding: Total police department pay exceeded base salary by more than $40 million, down from 2018, when the difference was $52 million
+
+Calculate the difference betwewen total base salary and actual pay for the police department in 2019 verus 2018
+
+```{r}
+salaries.19 %>% 
+  filter(grepl("Police Department", descr)) %>% 
+  summarise(base = sum(annual_rt, na.rm = T),
+            actual = sum(gross, na.rm = T)) %>%
+  mutate(difference = actual - base)
+```
+```{r}
+salaries.18 %>% 
+  filter(grepl("Police", descr)) %>% 
+  summarise(base = sum(annual_rt, na.rm = T),
+            actual = sum(gross, na.rm = T)) %>%
+  mutate(difference = actual - base)
+```
+
+### Finding: The median pay for an employee in the police department was $93,278
+
+Filter and summarize to calculate the median police department (including overtime) pay in 2019
+
+```{r}
+salaries.19 %>% 
+  filter(grepl("Police", descr)) %>% 
+  summarise(median = median(gross, na.rm = T)) 
+```
+
+### Finding: The fire department had the second-highest total pay, with salaries exceeding base salaries by more than $16 million
+
+Group by department (remove the parenthetical numbers in the department `descr` column to get an accurate tally), and arrange by total gross pay. Use `head()` to see the top departments.
+```{r, warning=F}
+salaries.19.dept <- separate(salaries.19,
+                           descr,
+                           into = c('dept', 'number'),
+                           sep = "\\(",
+                           remove = F) %>%
+  select(-number) %>% 
+  mutate(dept = trimws(dept)) %>%
+  group_by(dept) %>%
+  summarise(actual = sum(gross, na.rm = T)) %>%
+  arrange(desc(actual)) %>%
+  head(10)
+
+salaries.19.dept
+
+```
+
+The fire department is #2 after the police department.
+
+Calculate total pay plus the difference between base and actual for the fire department.
+
+```{r}
+salaries.19 %>% 
+  filter(grepl("Fire", descr)) %>% 
+  summarise(base = sum(annual_rt, na.rm = T),
+            actual = sum(gross, na.rm = T)) %>%
+  mutate(difference = actual - base)
+```
+The difference is more than 16 million.
+
+### Finding: The median pay for a fire department employee was $82,097
+
+```{r}
+salaries.19 %>% 
+  filter(grepl("Fire", descr)) %>% 
+  summarise(median = median(gross, na.rm = T)) 
+```
+
+### Finding: The second-highest paid employee was Frank Johnson, who earned $251,922 on a salary of $250,000. The next-highest paid was William Harris Jr., a police sergeant who made $249,356 on a salary of $107,364. Harris was followed by police Lt. Thomas Mistysyn Jr., who earned $247,182 on a base salary of $122,049 and fire department employee Anthony Smith, who earned $243,747 on a base salary of $105,000
+
+Arrange the data by `gross` and use `head()` to see the top salaries
+
+```{r}
+salaries.19 %>% arrange(desc(gross)) %>% head()
+```
+
+### Finding: Harris was the city’s highest paid employee in fiscal year 2018
+
+Arrange the 2018 data by `gross` and use `head(1)` to see the top paid employee
+
+```{r}
+salaries.18 %>% arrange(desc(gross)) %>% head(1)
+```
+
+### Finding: Mayor Bernard C. “Jack” Young earned $127,984 on a salary of $184,832, nearly $10,000 more than what he earned as City Council President during the last fiscal year
+
+Filter the 2018 and 2019 data to find Young's salaries in those fiscal years
+
+```{r}
+print(salaries.18 %>% filter(name =='Young,Bernard C'))
+print(salaries.19 %>% filter(name =='Young,Bernard C'))
+```
+
+```{r}
+print(paste("Mayor Young earned $", 
+      salaries.19[salaries.19$name =='Young,Bernard C', ]$gross - salaries.18[salaries.18$name =='Young,Bernard C',]$gross,
+      "more in fiscal year 2019 than in fiscal year 2018."))
+```
+
