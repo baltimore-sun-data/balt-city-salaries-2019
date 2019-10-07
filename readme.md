@@ -4,9 +4,9 @@
 
 By [Christine Zhang](mailto:czhang@baltsun.com)
 
-![](input/p1.png)
-
 The Baltimore Sun analyzed the fiscal year 2019 city government salaries figures [recently posted](https://data.baltimorecity.gov/City-Government/Baltimore-City-Employee-Salaries-FY2019/6xv6-e66h/data) on Open Baltimore, the city's open data website. The analysis provided information for an October 7, 2019 Baltimore Sun story titled "Baltimore’s highest-paid city employee is police sergeant charged with assaulting bystander" (print headline: "Sgt. charged in assault leads city in pay.")
+
+![](input/p1.png)
 
 The Sun's findings and analysis are available in the "analysis" markdown file in this repository: [`analysis.md`](https://github.com/baltimore-sun-data/balt-city-salaries-2019/blob/master/analysis.md).
 
